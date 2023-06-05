@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "simple-python-app-chart.fullname" . }}
+  labels:
+    {{- include "simple-python-app-chart.labels" . | nindent 4 }}
+spec:
+  externalTrafficPolicy: Local
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 80
+      protocol: TCP
+  selector:
+    {{- include "simple-python-app-chart.selectorLabels" . | nindent 4 }}

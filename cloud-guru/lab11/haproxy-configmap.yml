@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-config
+data:
+  haproxy.cfg: |
+    frontend ambassador
+      bind *:7171
+      default_backend api_svc
+    backend api_svc
+      server svc api-svc:8181
