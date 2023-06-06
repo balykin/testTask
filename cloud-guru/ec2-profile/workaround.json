@@ -1,0 +1,329 @@
+// Create IAM Trust Policy for an EC2 Role
+
+//create file trust_policy_ec2.json
+
+// Create the DEV_ROLE IAM Role
+aws iam create-role --role-name DEV_ROLE --assume-role-policy-document file://trust_policy_ec2.json
+// output: {
+    "Role": {
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "sts:AssumeRole",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    }
+                }
+            ]
+        },
+        "RoleId": "AROAUUQ7OYCNTHRNRA6K7",
+        "CreateDate": "2023-06-06T13:11:40Z",
+        "RoleName": "DEV_ROLE",
+        "Path": "/",
+        "Arn": "arn:aws:iam::318967300251:role/DEV_ROLE"
+    }
+}
+// Create an IAM Policy Defining Read-Only Access Permissions to an S3 Bucket
+
+//Create a file called dev_s3_read_access.json
+
+//Create the managed policy called DevS3ReadAccess
+aws iam create-policy --policy-name DevS3ReadAccess --policy-document file://dev_s3_read_access.json
+
+//output: {
+    "Policy": {
+        "PolicyName": "DevS3ReadAccess",
+        "PermissionsBoundaryUsageCount": 0,
+        "CreateDate": "2023-06-06T13:24:07Z",
+        "AttachmentCount": 0,
+        "IsAttachable": true,
+        "PolicyId": "ANPAUUQ7OYCNU7FZAWSWY",
+        "DefaultVersionId": "v1",
+        "Path": "/",
+        "Arn": "arn:aws:iam::318967300251:policy/DevS3ReadAccess",
+        "UpdateDate": "2023-06-06T13:24:07Z"
+    }
+}
+
+//Create Instance Profile and Attach Role to an EC2 Instance
+
+//Attach Managed Policy to Role
+aws iam attach-role-policy --role-name DEV_ROLE --policy-arn "arn:aws:iam::318967300251:policy/DevS3ReadAccess"
+// no output 
+
+//Verify the managed policy was attached
+aws iam list-attached-role-policies --role-name DEV_ROLE
+
+//output
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "DevS3ReadAccess",
+            "PolicyArn": "arn:aws:iam::318967300251:policy/DevS3ReadAccess"
+        }
+    ]
+}
+
+//Create the Instance Profile and Add the DEV_ROLE via the AWS CLI
+//Create instance profile named DEV_PROFILE:
+aws iam create-instance-profile --instance-profile-name DEV_PROFILE
+//output
+{
+    "InstanceProfile": {
+        "InstanceProfileId": "AIPAUUQ7OYCNTYJUOKSJH",
+        "Roles": [],
+        "CreateDate": "2023-06-06T13:31:26Z",
+        "InstanceProfileName": "DEV_PROFILE",
+        "Path": "/",
+        "Arn": "arn:aws:iam::318967300251:instance-profile/DEV_PROFILE"
+    }
+}
+//Add role to the DEV_PROFILE called DEV_ROLE:
+aws iam add-role-to-instance-profile --instance-profile-name DEV_PROFILE --role-name DEV_ROLE
+// no output 
+//Verify the configuration
+aws iam get-instance-profile --instance-profile-name DEV_PROFILE
+//output 
+{
+    "InstanceProfile": {
+        "InstanceProfileId": "AIPAUUQ7OYCNTYJUOKSJH",
+        "Roles": [
+            {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            }
+                        }
+                    ]
+                },
+                "RoleId": "AROAUUQ7OYCNTHRNRA6K7",
+                "CreateDate": "2023-06-06T13:11:40Z",
+                "RoleName": "DEV_ROLE",
+                "Path": "/",
+                "Arn": "arn:aws:iam::318967300251:role/DEV_ROLE"
+            }
+        ],
+        "CreateDate": "2023-06-06T13:31:26Z",
+        "InstanceProfileName": "DEV_PROFILE",
+        "Path": "/",
+        "Arn": "arn:aws:iam::318967300251:instance-profile/DEV_PROFILE"
+    }
+}
+//Attach the DEV_PROFILE Role to an Instance
+
+//In the terminal, attach the DEV_PROFILE to an EC2 instance, replacing <LAB_WEB_SERVER_INSTANCE_ID> with the Web Server instance ID you just copied:
+aws ec2 associate-iam-instance-profile --instance-id i-0b5bab9ea56c57b91 --iam-instance-profile Name="DEV_PROFILE"
+//output
+{
+    "IamInstanceProfileAssociation": {
+        "InstanceId": "i-0b5bab9ea56c57b91",
+        "State": "associating",
+        "AssociationId": "iip-assoc-0e1803a78e4ef2de9",
+        "IamInstanceProfile": {
+            "Id": "AIPAUUQ7OYCNTYJUOKSJH",
+            "Arn": "arn:aws:iam::318967300251:instance-profile/DEV_PROFILE"
+        }
+    }
+}
+//Verify the configuration,  Verify this by locating the IamInstanceProfile section in the output, and look below to make sure the "Arn" ends in /DEV_PROFILE.
+aws ec2 describe-instances --instance-ids i-0b5bab9ea56c57b91
+//output
+{
+    "Reservations": [
+        {
+            "Instances": [
+                {
+                    "Monitoring": {
+                        "State": "disabled"
+                    },
+                    "PublicDnsName": "ec2-3-208-90-253.compute-1.amazonaws.com",
+                    "State": {
+                        "Code": 16,
+                        "Name": "running"
+                    },
+                    "EbsOptimized": false,
+                    "LaunchTime": "2023-06-06T11:40:21.000Z",
+                    "PublicIpAddress": "3.208.90.253",
+                    "PrivateIpAddress": "10.0.1.87",
+                    "ProductCodes": [],
+                    "VpcId": "vpc-0eeef8f53ac1a67bb",
+                    "CpuOptions": {
+                        "CoreCount": 1,
+                        "ThreadsPerCore": 2
+                    },
+                    "StateTransitionReason": "",
+                    "InstanceId": "i-0b5bab9ea56c57b91",
+                    "EnaSupport": true,
+                    "ImageId": "ami-01d3ae06c56012dcd",
+                    "PrivateDnsName": "ip-10-0-1-87.ec2.internal",
+                    "SecurityGroups": [
+                        {
+                            "GroupName": "cfst-3035-2cc6934eb1af74ba74b2ac479bead906-SecurityGroupHTTPAndSSH-BD95XRRJ4KRG",
+                            "GroupId": "sg-08b04df865eb5ef05"
+                        }
+                    ],
+                    "ClientToken": "cfst-EC2In-TVXOG0LYY83X",
+                    "SubnetId": "subnet-0e0e698f209124738",
+                    "InstanceType": "t3.micro",
+                    "CapacityReservationSpecification": {
+                        "CapacityReservationPreference": "open"
+                    },
+                    "NetworkInterfaces": [
+                        {
+                            "Status": "in-use",
+                            "MacAddress": "02:28:fe:4e:e7:77",
+                            "SourceDestCheck": true,
+                            "VpcId": "vpc-0eeef8f53ac1a67bb",
+                            "Description": "",
+                            "NetworkInterfaceId": "eni-088974657d7eacd01",
+                            "PrivateIpAddresses": [
+                                {
+                                    "PrivateDnsName": "ip-10-0-1-87.ec2.internal",
+                                    "PrivateIpAddress": "10.0.1.87",
+                                    "Primary": true,
+                                    "Association": {
+                                        "PublicIp": "3.208.90.253",
+                                        "PublicDnsName": "ec2-3-208-90-253.compute-1.amazonaws.com",
+                                        "IpOwnerId": "amazon"
+                                    }
+                                }
+                            ],
+                            "PrivateDnsName": "ip-10-0-1-87.ec2.internal",
+                            "InterfaceType": "interface",
+                            "Attachment": {
+                                "Status": "attached",
+                                "DeviceIndex": 0,
+                                "DeleteOnTermination": true,
+                                "AttachmentId": "eni-attach-0d5bae8c0b710545a",
+                                "AttachTime": "2023-06-06T11:40:21.000Z"
+                            },
+                            "Groups": [
+                                {
+                                    "GroupName": "cfst-3035-2cc6934eb1af74ba74b2ac479bead906-SecurityGroupHTTPAndSSH-BD95XRRJ4KRG",
+                                    "GroupId": "sg-08b04df865eb5ef05"
+                                }
+                            ],
+                            "Ipv6Addresses": [],
+                            "OwnerId": "318967300251",
+                            "PrivateIpAddress": "10.0.1.87",
+                            "SubnetId": "subnet-0e0e698f209124738",
+                            "Association": {
+                                "PublicIp": "3.208.90.253",
+                                "PublicDnsName": "ec2-3-208-90-253.compute-1.amazonaws.com",
+                                "IpOwnerId": "amazon"
+                            }
+                        }
+                    ],
+                    "SourceDestCheck": true,
+                    "Placement": {
+                        "Tenancy": "default",
+                        "GroupName": "",
+                        "AvailabilityZone": "us-east-1a"
+                    },
+                    "Hypervisor": "xen",
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/xvda",
+                            "Ebs": {
+                                "Status": "attached",
+                                "DeleteOnTermination": true,
+                                "VolumeId": "vol-033016baea7517add",
+                                "AttachTime": "2023-06-06T11:40:21.000Z"
+                            }
+                        }
+                    ],
+                    "Architecture": "x86_64",
+                    "RootDeviceType": "ebs",
+                    "IamInstanceProfile": {
+                        "Id": "AIPAUUQ7OYCNTYJUOKSJH",
+                        "Arn": "arn:aws:iam::318967300251:instance-profile/DEV_PROFILE"
+                    },
+                    "RootDeviceName": "/dev/xvda",
+                    "VirtualizationType": "hvm",
+                    "Tags": [
+                        {
+                            "Value": "arn:aws:cloudformation:us-east-1:318967300251:stack/cfst-3035-2cc6934eb1af74ba74b2ac479bead906/dbca28c0-045e-11ee-9371-128711884027",
+                            "Key": "Application"
+                        },
+                        {
+                            "Value": "arn:aws:cloudformation:us-east-1:318967300251:stack/cfst-3035-2cc6934eb1af74ba74b2ac479bead906/dbca28c0-045e-11ee-9371-128711884027",
+                            "Key": "aws:cloudformation:stack-id"
+                        },
+                        {
+                            "Value": "17880774",
+                            "Key": "UserId"
+                        },
+                        {
+                            "Value": "EC2InstanceWebServer",
+                            "Key": "aws:cloudformation:logical-id"
+                        },
+                        {
+                            "Value": "Web Server",
+                            "Key": "Name"
+                        },
+                        {
+                            "Value": "cfst-3035-2cc6934eb1af74ba74b2ac479bead906",
+                            "Key": "aws:cloudformation:stack-name"
+                        }
+                    ],
+                    "HibernationOptions": {
+                        "Configured": false
+                    },
+                    "MetadataOptions": {
+                        "State": "applied",
+                        "HttpEndpoint": "enabled",
+                        "HttpTokens": "optional",
+                        "HttpPutResponseHopLimit": 1
+                    },
+                    "AmiLaunchIndex": 0
+                }
+            ],
+            "ReservationId": "r-0f5b25fdedbd3e121",
+            "RequesterId": "043234062703",
+            "Groups": [],
+            "OwnerId": "318967300251"
+        }
+    ]
+}
+
+// From target EC2 instace verify the instance is assuming the DEV_ROLE role, We should see DEV_ROLE in the Arn.
+aws sts get-caller-identity
+//output
+{
+    "Account": "318967300251",
+    "UserId": "AROAUUQ7OYCNTHRNRA6K7:i-0b5bab9ea56c57b91",
+    "Arn": "arn:aws:sts::318967300251:assumed-role/DEV_ROLE/i-0b5bab9ea56c57b91"
+}
+
+//List the buckets in the account: 
+aws s3 ls
+//output
+2023-06-06 11:40:00 cfst-3035-2cc6934eb1af74ba74b-s3bucketengineering-1gvr43ckcy6kr
+2023-06-06 11:40:00 cfst-3035-2cc6934eb1af74ba74b-s3bucketlookupfiles-1jvbfxt3jsntd
+2023-06-06 11:40:00 cfst-3035-2cc6934eb1af74ba74b2ac-cloudtrailbucket-z7zdfoxlf6py
+2023-06-06 11:40:01 cfst-3035-2cc6934eb1af74ba74b2ac47-s3bucketsecret-ffg7yosneu7o
+2023-06-06 11:40:00 cfst-3035-2cc6934eb1af74ba74b2ac479b-s3bucketprod-1hi2m1cptvhwu
+2023-06-06 11:40:00 cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+
+//List files in the bucket, We should see a list of files.
+aws s3 ls s3://cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+2023-06-06 11:41:21         41 file1-cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+2023-06-06 11:41:21         41 file2-cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+2023-06-06 11:41:21         41 file3-cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+2023-06-06 11:41:21         41 file4-cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+2023-06-06 11:41:21         41 file5-cfst-3035-2cc6934eb1af74ba74b2ac479be-s3bucketdev-gx3shy2wt937
+
+// Conclusion:
+//  - We create a role, we assigned it permission so EC2 can assume that role.
+//  - We create a policy allowing that role to access an S3 bucket.
+//  - We then assosiate that policy with the role,
+//   and we created a development instance profile and assosiate that instance profile with the role
+//   and then we attached that instance profile to an EC2 instance.
+//   BRAVO 
